@@ -32,11 +32,8 @@ lint: ## All-in-one linting
 
 .PHONY: provision
 provision: export KUBECONFIG = $(KIND_KUBECONFIG)
-provision: .service-definition ## Install local Kubernetes cluster and provision the service instance
+provision: stackgres-setup
 	kubectl apply -f service/prototype-instance.yaml
-	kubectl wait -n my-app --for condition=Ready RedisInstance.syn.tools/redis1 --timeout 180s
-	kubectl apply -f service/test-job.yaml
-	kubectl wait -n my-app --for condition=Complete job/service-connection-verify
 
 .PHONY: deprovision
 deprovision: export KUBECONFIG = $(KIND_KUBECONFIG)
@@ -68,7 +65,7 @@ minio-setup: export KUBECONFIG = $(KIND_KUBECONFIG)
 minio-setup: crossplane-setup ## Install Minio Crossplane implementation
 	kubectl apply -f minio/s3-composite.yaml
 	kubectl apply -f minio/s3-composition.yaml
-	kubectl wait --for condition=Offered compositeresourcedefinition/xs3buckets.syn.tools
+	kubectl wait --for condition=Established compositeresourcedefinition/xs3buckets.syn.tools
 
 .PHONY: k8up-setup
 k8up-setup: minio-setup #$(k8up_sentinel) ## Install K8up operator
@@ -109,8 +106,8 @@ $(stackgres_sentinel): crossplane-setup .service-definition
 .PHONY: clean
 clean: kind-clean ## Clean up local dev environment
 
+.PHONY: run-tests
 
-.PHONY: install-sample
-install-sample: export KUBECONFIG = $(KIND_KUBECONFIG)
-install-sample:
-	kubectl apply -f service/prototype-instance.yaml
+run-tests: export KUBECONFIG = $(KIND_KUBECONFIG)
+run-tests: crossplane-setup .service-definition
+	kubectl kuttl test ./test

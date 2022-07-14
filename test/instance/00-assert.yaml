@@ -1,0 +1,52 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120
+---
+# check for cluster parameters
+apiVersion: kubernetes.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  labels:
+    crossplane.io/claim-name: kuttl-postgres1
+spec:
+  forProvider:
+    manifest:
+      apiVersion: stackgres.io/v1
+      kind: SGCluster
+      spec:
+        instances: 1
+        pods:
+          persistentVolume:
+            size: 10Gi
+        postgres:
+          version: '14.4'
+---
+# check for bucket creation
+apiVersion: syn.tools/v1
+kind: XS3Bucket
+metadata:
+  labels:
+    crossplane.io/claim-name: kuttl-postgres1
+---
+# check for profile
+apiVersion: kubernetes.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  labels:
+    crossplane.io/claim-name: kuttl-postgres1
+spec:
+  forProvider:
+    manifest:
+      apiVersion: stackgres.io/v1
+      kind: SGInstanceProfile
+      spec:
+        cpu: "1"
+        memory: 1Gi
+---
+# check for service monitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app: StackGresCluster
+  namespace: prometheus-system

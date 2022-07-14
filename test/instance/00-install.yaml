@@ -1,0 +1,14 @@
+apiVersion: syn.tools/v1
+kind: PostgreSQLInstance
+metadata:
+  name: kuttl-postgres1
+spec:
+  parameters:
+    resources:
+      storageSize: 10Gi
+      limits:
+        memory: 1Gi
+    updatePolicy:
+      version: '14.4'
+    alerts:
+      enabled: false

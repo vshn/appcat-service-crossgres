@@ -7,7 +7,7 @@ kubeProxy:
 kubeControllerManager:
   enabled: false
 grafana:
-  enabled: true
+  enabled: false
 
 alertmanager:
   alertmanagerSpec:
