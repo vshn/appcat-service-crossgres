@@ -84,3 +84,12 @@ We're providing the same version compatibility as the Stackgres operator provide
 ### Deploying additional resources
 
 Crossplane itself is not intended to deploy arbitrary namespaced K8s objects. See [here](https://github.com/crossplane/crossplane/issues/1730) for more information about this topic. To combat this there's the [provider-kubernetes](https://github.com/crossplane-contrib/provider-kubernetes) which has a nice feature set.
+
+## Run the Tests
+
+Testing of the composition is handled by kuttl. You need it installed on your machine in order to run the tests.
+
+Once you've installed it, you can simply run:
+`make run-tests`
+
+The tests themselves are located in the `test` folder.
