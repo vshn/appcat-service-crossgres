@@ -15,32 +15,26 @@ include kind/kind.mk
 # Docs module
 include docs/antora-preview.mk docs/antora-build.mk
 
-.PHONY: help
 help: ## Show this help
 	@grep -E -h '\s##\s' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-.PHONY: lint
 lint: ## All-in-one linting
 	@echo 'Check for uncommitted changes ...'
 	git diff --exit-code
 
-.PHONY: .service-definition
 .service-definition: crossplane-setup k8up-setup prometheus-setup
 	kubectl apply -f crossplane/stackgres/composite.yaml
 	kubectl apply -f crossplane/stackgres/composition.yaml
 	kubectl wait --for condition=Offered compositeresourcedefinition/xpostgresqlinstances.syn.tools
 
-.PHONY: provision
 provision: export KUBECONFIG = $(KIND_KUBECONFIG)
 provision: stackgres-setup
 	kubectl apply -f service/prototype-instance.yaml
 
-.PHONY: deprovision
 deprovision: export KUBECONFIG = $(KIND_KUBECONFIG)
 deprovision: kind-setup ## Uninstall the service instance
 	kubectl delete -f service/prototype-instance.yaml
 
-.PHONY: crossplane-setup
 crossplane-setup: $(crossplane_sentinel) ## Install local Kubernetes cluster and install Crossplane
 
 $(crossplane_sentinel): export KUBECONFIG = $(KIND_KUBECONFIG)
@@ -60,14 +54,12 @@ $(crossplane_sentinel): kind-setup
 	kubectl create clusterrolebinding crossplane:provider-kubernetes-admin --clusterrole cluster-admin --serviceaccount crossplane-system:$$(kubectl get sa -n crossplane-system -o custom-columns=NAME:.metadata.name --no-headers | grep provider-kubernetes)
 	@touch $@
 
-.PHONY: minio-setup
 minio-setup: export KUBECONFIG = $(KIND_KUBECONFIG)
 minio-setup: crossplane-setup ## Install Minio Crossplane implementation
 	kubectl apply -f minio/s3-composite.yaml
 	kubectl apply -f minio/s3-composition.yaml
 	kubectl wait --for condition=Established compositeresourcedefinition/xs3buckets.syn.tools
 
-.PHONY: k8up-setup
 k8up-setup: minio-setup #$(k8up_sentinel) ## Install K8up operator
 
 $(k8up_sentinel): export KUBECONFIG = $(KIND_KUBECONFIG)
@@ -78,7 +70,6 @@ $(k8up_sentinel): kind-setup
 	kubectl -n k8up-system wait --for condition=Available deployment/k8up --timeout 60s
 	@touch $@
 
-.PHONY: prometheus-setup
 prometheus-setup: $(prometheus_sentinel) ## Install Prometheus stack
 
 $(prometheus_sentinel): export KUBECONFIG = $(KIND_KUBECONFIG)
@@ -94,8 +85,7 @@ $(prometheus_sentinel): kind-setup-ingress
 	@echo -e "***\n*** Installed Prometheus in http://127.0.0.1.nip.io:8081/prometheus/ and AlertManager in http://127.0.0.1.nip.io:8081/alertmanager/.\n***"
 	@touch $@
 
-.PHONY: stackgres-setup
-stackgres-setup: $(stackgres_sentinel)
+stackgres-setup: $(stackgres_sentinel) ## Setup the stackgres operator
 
 $(stackgres_sentinel): export KUBECONFIG = $(KIND_KUBECONFIG)
 $(stackgres_sentinel): crossplane-setup .service-definition
@@ -106,8 +96,6 @@ $(stackgres_sentinel): crossplane-setup .service-definition
 .PHONY: clean
 clean: kind-clean ## Clean up local dev environment
 
-.PHONY: run-tests
-
 run-tests: export KUBECONFIG = $(KIND_KUBECONFIG)
-run-tests: crossplane-setup .service-definition
+run-tests: stackgres-setup ## run tests with kuttl
 	kubectl kuttl test ./test

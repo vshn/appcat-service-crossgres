@@ -21,7 +21,6 @@ $(ingress_sentinel): $(KIND_KUBECONFIG)
 # kind-load-image: kind-setup build-docker ### Load the container image onto kind cluster
 # 	@$(KIND) load docker-image --name $(KIND_CLUSTER) $(CONTAINER_IMG)
 
-.PHONY: kind-clean
 kind-clean: export KUBECONFIG = $(KIND_KUBECONFIG)
 kind-clean: ## Removes the kind Cluster
 	@$(KIND_CMD) delete cluster --name $(KIND_CLUSTER) || true
