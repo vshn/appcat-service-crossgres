@@ -1,0 +1,288 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: crossplane-postgresql
+---
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  annotations:
+    service.syn.tools/description: PostgreSQL Instance
+    service.syn.tools/metadata: |
+      {
+        "bullets": [
+          "powered by VSHN"
+        ],
+        "dedicatedService": true,
+        "highAvailability": false,
+        "max_databases": "16",
+        "shareable": true
+      }
+  labels:
+    service.syn.tools/cluster: appc-service1
+    service.syn.tools/id: postgresql-k8s
+    service.syn.tools/name: postgresql-k8s
+    service.syn.tools/updatable: "true"
+  name: postgresql
+spec:
+  compositeTypeRef:
+    apiVersion: syn.tools/v1
+    kind: XPostgreSQLInstance
+  writeConnectionSecretsToNamespace: crossplane-postgresql
+  resources:
+    # namespace
+    - base:
+        apiVersion: v1
+        kind: Namespace  # Let the composition manage the namespace, Crossplane will clean it up if deprovisioned
+        metadata:
+          name: "" # patched from composite
+      patches:
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: metadata.name
+          transforms:
+            - type: string
+              string:
+                fmt: "sv-postgresql-%s"
+      readinessChecks:
+        - type: MatchString
+          fieldPath: status.phase
+          matchString: Active
+    # backup bucket
+    - base:
+        apiVersion: syn.tools/v1
+        kind: XS3Bucket
+        metadata:
+          name: "" #patched
+        spec: {}
+      patches:
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: metadata.name
+    # postgres backup schedule
+    - base:
+        apiVersion: kubernetes.crossplane.io/v1alpha1
+        kind: Object
+        spec:
+          references:
+            # Use patchesFrom to patch field from other k8s resource to this object
+            - patchesFrom:
+                apiVersion: syn.tools/v1
+                kind: XS3Bucket
+                # namespace: '' # patched
+                name: '' #patched
+                fieldPath: status.endpoint
+              toFieldPath: spec.storage.s3Compatible.endpoint
+            - patchesFrom:
+                apiVersion: syn.tools/v1
+                kind: XS3Bucket
+                # namespace: '' # patched
+                name: '' #patched
+                fieldPath: status.bucketName
+              toFieldPath: spec.storage.s3Compatible.bucket
+          forProvider:
+            manifest:
+              apiVersion: stackgres.io/v1
+              kind: SGBackupConfig
+              metadata:
+                namespace: "" #patched
+                name: '' #patched
+              spec:
+                baseBackups:
+                  cronSchedule: '*/5 * * * *'
+                  retention: 6
+                storage:
+                  type: 's3Compatible'
+                  s3Compatible:
+                    bucket: '' # patched
+                    enablePathStyleAddressing: true
+                    endpoint: '' #patched
+                    awsCredentials:
+                      secretKeySelectors:
+                        accessKeyId:
+                          name: '' # patched
+                          key: 'accessKey'
+                        secretAccessKey:
+                          name: '' # patched
+                          key: 'secretKey'
+      patches:
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: spec.forProvider.manifest.metadata.namespace
+          transforms:
+            - type: string
+              string:
+                fmt: "sv-postgresql-%s"
+        # - fromFieldPath: metadata.labels[crossplane.io/composite]
+        #   toFieldPath: spec.references[0].patchesFrom.namespace
+        #   transforms:
+        #     - type: string
+        #       string:
+        #         fmt: "sv-postgresql-%s"
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: spec.references[0].patchesFrom.name
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: metadata.name
+        # - fromFieldPath: metadata.labels[crossplane.io/composite]
+        #   toFieldPath: spec.references[1].patchesFrom.namespace
+        #   transforms:
+        #     - type: string
+        #       string:
+        #         fmt: "sv-postgresql-%s"
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: spec.references[1].patchesFrom.name
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: metadata.name
+          transforms:
+            - type: string
+              string:
+                fmt: "%s-backup"
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: spec.forProvider.manifest.spec.storage.s3Compatible.awsCredentials.secretKeySelectors.accessKeyId.name
+          transforms:
+            - type: string
+              string:
+                fmt: "%s-bucket"
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: spec.forProvider.manifest.spec.storage.s3Compatible.awsCredentials.secretKeySelectors.secretAccessKey.name
+          transforms:
+            - type: string
+              string:
+                fmt: "%s-bucket"
+    # cluster profile
+    - base:
+        apiVersion: kubernetes.crossplane.io/v1alpha1
+        kind: Object
+        spec:
+          forProvider:
+            manifest:
+              apiVersion: stackgres.io/v1
+              kind: SGInstanceProfile
+              metadata:
+                name: '' #patched
+              spec:
+                cpu: "1"
+                memory: '' #patched
+      patches:
+      # name of the wrapping object
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: metadata.name
+          transforms:
+            - type: string
+              string:
+                fmt: "%s-profile"
+      # name of the profile object
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: spec.forProvider.manifest.metadata.name
+        # namespace of the profile object
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: spec.forProvider.manifest.metadata.namespace
+          transforms:
+            - type: string
+              string:
+                fmt: "sv-postgresql-%s"
+      # memory
+        - fromFieldPath: spec.parameters.resources.limits.memory
+          toFieldPath: spec.forProvider.manifest.spec.memory
+    # postgres cluster
+    - base:
+        apiVersion: kubernetes.crossplane.io/v1alpha1
+        kind: Object
+        spec:
+          forProvider:
+            manifest:
+              apiVersion: stackgres.io/v1
+              kind: SGCluster
+              metadata:
+                name: "" #patched
+              spec:
+                configurations:
+                  sgBackupConfig: '' #patched
+                instances: 1
+                postgres:
+                  version: '' #patched
+                sgInstanceProfile: '' #patched
+                prometheusAutobind: true
+                pods:
+                  persistentVolume:
+                    size: "" #patched
+      patches:
+        - fromFieldPath: metadata.labels
+        - fromFieldPath: metadata.annotations
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: spec.forProvider.manifest.metadata.name
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: spec.forProvider.manifest.metadata.namespace
+          transforms:
+            - type: string
+              string:
+                fmt: "sv-postgresql-%s"
+        - fromFieldPath: spec.parameters.resources.storageSize
+          toFieldPath: spec.forProvider.manifest.spec.pods.persistentVolume.size
+        - fromFieldPath: spec.parameters.updatePolicy.version
+          toFieldPath: spec.forProvider.manifest.spec.postgres.version
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: spec.forProvider.manifest.spec.configurations.sgBackupConfig
+          transforms:
+            - type: string
+              string:
+                fmt: "%s-backup"
+      # instance profile
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: spec.forProvider.manifest.spec.sgInstanceProfile
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: metadata.name
+          transforms:
+            - type: string
+              string:
+                fmt: "%s-cluster"
+      # readinessChecks:
+      #   - type: NonEmpty
+      #     fieldPath: status.atProvider.manifest.status.podStatuses
+    # connection secret
+    - base:
+        apiVersion: kubernetes.crossplane.io/v1alpha1
+        kind: Object
+        spec:
+          forProvider:
+            manifest:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: '' #patched
+                namespace: '' # patched
+          references:
+          # get the passwords from the operator's secret
+            - patchesFrom:
+                apiVersion: v1
+                kind: Secret
+                namespace: '' # patched
+                name: '' #patched
+                fieldPath: data.superuser-password
+              toFieldPath: data.superuser-password
+      patches:
+      # namespace of the target secret
+        - fromFieldPath: metadata.labels[crossplane.io/claim-namespace]
+          toFieldPath: spec.forProvider.manifest.metadata.namespace
+      # name of the wrapping object resource
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: metadata.name
+          transforms:
+            - type: string
+              string:
+                fmt: "%s-connection"
+      # name of the target secret
+        - fromFieldPath: metadata.labels[crossplane.io/claim-name]
+          toFieldPath: spec.forProvider.manifest.metadata.name
+          transforms:
+            - type: string
+              string:
+                fmt: "%s-connection"
+      # namespace of source secret
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: spec.references[0].patchesFrom.namespace
+          transforms:
+            - type: string
+              string:
+                fmt: "sv-postgresql-%s"
+      # name of source secret
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: spec.references[0].patchesFrom.name
