@@ -16,10 +16,5 @@ spec:
       limits:
         memory: 1Gi
     updatePolicy:
-      version: '14.4'
-    alerts:
-      # We have to use actual boolean flags if we want to (de)activate PrometheusRule in the helm chart (passthrough value),
-      # since Compositions doesn't offer patches with expression evaluation (e.g. `if sla == "guaranteed" then true else false`),
-      # not even boolean negations.
-      # We also can't use map-patches since map patches are map[string]string but the chart expects boolean values and fails if they're strings.
-      enabled: false
+      version: '13.7'
+      securityUpdates: '*/10 * * * *'

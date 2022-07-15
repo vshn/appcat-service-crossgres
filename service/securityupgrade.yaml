@@ -1,0 +1,11 @@
+apiVersion: stackgres.io/v1
+kind: SGDbOps
+metadata:
+  name: securityupgrade
+  namespace: sv-postgresql-postgres1-44jvc
+spec:
+ sgCluster: postgres1-44jvc
+ op: securityUpgrade
+ maxRetries: 1
+ securityUpgrade:
+   method: InPlace
