@@ -22,7 +22,8 @@ lint: ## All-in-one linting
 	@echo 'Check for uncommitted changes ...'
 	git diff --exit-code
 
-.service-definition: crossplane-setup k8up-setup prometheus-setup
+service-definition: export KUBECONFIG = $(KIND_KUBECONFIG)
+service-definition: crossplane-setup k8up-setup prometheus-setup ## Install the compositions
 	kubectl apply -f crossplane/stackgres/composite.yaml
 	kubectl apply -f crossplane/stackgres/composition.yaml
 	kubectl wait --for condition=Offered compositeresourcedefinition/xpostgresqlinstances.syn.tools
@@ -88,7 +89,7 @@ $(prometheus_sentinel): kind-setup-ingress
 stackgres-setup: $(stackgres_sentinel) ## Setup the stackgres operator
 
 $(stackgres_sentinel): export KUBECONFIG = $(KIND_KUBECONFIG)
-$(stackgres_sentinel): crossplane-setup .service-definition
+$(stackgres_sentinel): crossplane-setup service-definition
 	kubectl create ns stackgres
 	helm install --namespace stackgres stackgres-operator https://stackgres.io/downloads/stackgres-k8s/stackgres/latest/helm/stackgres-operator.tgz
 	@touch $@
@@ -96,6 +97,6 @@ $(stackgres_sentinel): crossplane-setup .service-definition
 .PHONY: clean
 clean: kind-clean ## Clean up local dev environment
 
-run-tests: export KUBECONFIG = $(KIND_KUBECONFIG)
-run-tests: stackgres-setup ## run tests with kuttl
+tests: export KUBECONFIG = $(KIND_KUBECONFIG)
+tests: stackgres-setup ## run tests with kuttl NOTE: no other insntance should be provisioned when running the tests!
 	kubectl kuttl test ./test
