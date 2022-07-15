@@ -56,6 +56,7 @@ spec:
           name: "" #patched
         spec: {}
       patches:
+        - fromFieldPath: metadata.annotations
         - fromFieldPath: metadata.labels[crossplane.io/composite]
           toFieldPath: metadata.name
     # postgres backup schedule
@@ -103,6 +104,7 @@ spec:
                           name: '' # patched
                           key: 'secretKey'
       patches:
+        - fromFieldPath: metadata.annotations
       # patch targe SGBackupConfig namespace
         - fromFieldPath: metadata.labels[crossplane.io/composite]
           toFieldPath: spec.forProvider.manifest.metadata.namespace
@@ -149,6 +151,7 @@ spec:
                 cpu: "1"
                 memory: '' #patched
       patches:
+        - fromFieldPath: metadata.annotations
       # name of the wrapping object
         - fromFieldPath: metadata.labels[crossplane.io/composite]
           toFieldPath: metadata.name
@@ -240,6 +243,7 @@ spec:
                 name: maintenance
                 namespace: '' # patched
       patches:
+        - fromFieldPath: metadata.annotations
       # name of wrapping object
         - fromFieldPath: metadata.labels[crossplane.io/composite]
           toFieldPath: metadata.name
@@ -256,29 +260,42 @@ spec:
                 fmt: "sv-postgresql-%s"
     # clusterrolebinding for maintenance SA
     - base:
-        kind: ClusterRoleBinding
-        apiVersion: rbac.authorization.k8s.io/v1
-        metadata:
-          name: '' # patched
-        subjects:
-        - kind: ServiceAccount
-          name: maintenance
-          namespace: '' #patched
-        roleRef:
-          kind: ClusterRole
-          name: cluster-admin
-          apiGroup: rbac.authorization.k8s.io
+        apiVersion: kubernetes.crossplane.io/v1alpha1
+        kind: Object
+        spec:
+          forProvider:
+            manifest:
+              kind: ClusterRoleBinding
+              apiVersion: rbac.authorization.k8s.io/v1
+              metadata:
+                name: '' # patched
+              subjects:
+              - kind: ServiceAccount
+                name: maintenance
+                namespace: '' #patched
+              roleRef:
+                kind: ClusterRole
+                name: cluster-admin
+                apiGroup: rbac.authorization.k8s.io
       patches:
-      # name of wrapping object
+        - fromFieldPath: metadata.annotations
+        # name of the wrapping object
         - fromFieldPath: metadata.labels[crossplane.io/composite]
           toFieldPath: metadata.name
           transforms:
             - type: string
               string:
                 fmt: "%s-maintenance-service-account"
+      # name of the clusterrole
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: spec.forProvider.manifest.metadata.name
+          transforms:
+            - type: string
+              string:
+                fmt: "%s-maintenance-service-account"
       # service account namespace patch
         - fromFieldPath: metadata.labels[crossplane.io/composite]
-          toFieldPath: subjects[0].namespace
+          toFieldPath: spec.forProvider.manifest.subjects[0].namespace
           transforms:
             - type: string
               string:
@@ -316,6 +333,7 @@ spec:
                      method: InPlace
                   EOF
       patches:
+        - fromFieldPath: metadata.annotations
         # name of wrapping object
         - fromFieldPath: metadata.labels[crossplane.io/composite]
           toFieldPath: metadata.name
@@ -372,6 +390,7 @@ spec:
                               name: apply-security-configmap
 
       patches:
+        - fromFieldPath: metadata.annotations
       # name of wrapping object
         - fromFieldPath: metadata.labels[crossplane.io/composite]
           toFieldPath: metadata.name
@@ -421,6 +440,7 @@ spec:
                 fieldPath: data.superuser-password
               toFieldPath: data.superuser-password
       patches:
+        - fromFieldPath: metadata.annotations
       # namespace of the target secret
         - fromFieldPath: metadata.labels[crossplane.io/claim-namespace]
           toFieldPath: spec.forProvider.manifest.metadata.namespace

@@ -3,8 +3,8 @@
 apiVersion: kubernetes.crossplane.io/v1alpha1
 kind: Object
 metadata:
-  labels:
-    crossplane.io/claim-name: kuttl-postgres1-defaults
+  annotations:
+    kuttl: '01-install'
 spec:
   forProvider:
     manifest:
