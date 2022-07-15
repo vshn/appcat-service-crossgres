@@ -283,6 +283,53 @@ spec:
             - type: string
               string:
                 fmt: "sv-postgresql-%s"
+    # configmap with maintenance ops
+    - base:
+        apiVersion: kubernetes.crossplane.io/v1alpha1
+        kind: Object
+        spec:
+          forProvider:
+            manifest:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: apply-security-configmap
+                namespace: '' # patched
+              data:
+                apply-security.sh: |
+                  #!/bin/sh
+                  set -e
+
+                  kubectl -n ${TARGET_NAMESPACE} delete sgdbops securityupgrade || true
+
+                  cat <<EOF | kubectl apply -f -
+                  apiVersion: stackgres.io/v1
+                  kind: SGDbOps
+                  metadata:
+                    name: securityupgrade
+                    namespace: ${TARGET_NAMESPACE}
+                  spec:
+                   sgCluster: ${TARGET_INSTANCE}
+                   op: securityUpgrade
+                   maxRetries: 1
+                   securityUpgrade:
+                     method: InPlace
+                  EOF
+      patches:
+        # name of wrapping object
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: metadata.name
+          transforms:
+            - type: string
+              string:
+                fmt: "%s-security-configmap"
+      # namespace patch
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: spec.forProvider.manifest.metadata.namespace
+          transforms:
+            - type: string
+              string:
+                fmt: "sv-postgresql-%s"
     # maintenance
     - base:
         apiVersion: kubernetes.crossplane.io/v1alpha1
@@ -303,16 +350,27 @@ spec:
                       spec:
                         serviceAccountName: maintenance
                         containers:
-                        - name: hello
+                        - name: apply
                           image: docker.io/bitnami/kubectl:latest
                           imagePullPolicy: IfNotPresent
+                          env:
+                            - name: TARGET_NAMESPACE
+                              value: '' # patched
+                            - name: TARGET_INSTANCE
+                              value: '' # patched
+                          command:
+                            - sh
                           args:
-                            - -n
-                            - '' #patched
-                            - get
-                            - sgcluster
-                            - '' # patched
+                            - /scripts/apply-security.sh
+                          volumeMounts:
+                            - mountPath: /scripts
+                              name: scripts
                         restartPolicy: OnFailure
+                        volumes:
+                          - name: scripts
+                            configMap:
+                              name: apply-security-configmap
+
       patches:
       # name of wrapping object
         - fromFieldPath: metadata.labels[crossplane.io/composite]
@@ -333,14 +391,14 @@ spec:
           toFieldPath: spec.forProvider.manifest.spec.schedule
       # target namespace patch
         - fromFieldPath: metadata.labels[crossplane.io/composite]
-          toFieldPath: spec.forProvider.manifest.spec.jobTemplate.spec.template.spec.containers[*].args[1]
+          toFieldPath: spec.forProvider.manifest.spec.jobTemplate.spec.template.spec.containers[*].env[0].value
           transforms:
             - type: string
               string:
                 fmt: "sv-postgresql-%s"
       # target insntance patch
         - fromFieldPath: metadata.labels[crossplane.io/composite]
-          toFieldPath: spec.forProvider.manifest.spec.jobTemplate.spec.template.spec.containers[*].args[4]
+          toFieldPath: spec.forProvider.manifest.spec.jobTemplate.spec.template.spec.containers[*].env[1].value
     # connection secret
     - base:
         apiVersion: kubernetes.crossplane.io/v1alpha1
