@@ -85,6 +85,16 @@ We're providing the same version compatibility as the Stackgres operator provide
 
 Crossplane itself is not intended to deploy arbitrary namespaced K8s objects. See [here](https://github.com/crossplane/crossplane/issues/1730) for more information about this topic. To combat this there's the [provider-kubernetes](https://github.com/crossplane-contrib/provider-kubernetes) which has a nice feature set.
 
+## Updates
+### Security Updates
+These are trivial to apply. Just create a SGdbops object with the securityUpgrade operation and a reference to the right cluster. Then it will be restarted and upgraded. We can probably create simple cronjobs per cluster to apply this.
+
+### Minor Version Upgrades
+They are a bit more involved. They need to specify an explicit version that should be used, as well as a reference to the cluster. We could expose an XRD that wires everything up for the customer. Then customers can do minor upgrades at their own convenience.
+
+### Major Version Upgrades
+They are the most involved, like the minor upgrades they need a specific version, as well as a new config object. Not quite sure how we could handle it via XRDs though. Maybe just telling the customers to create new instances is the easier approach.
+
 ## Run the Tests
 
 Testing of the composition is handled by kuttl. You need it installed on your machine in order to run the tests.

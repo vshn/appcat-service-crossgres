@@ -17,8 +17,17 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Run provision
-        run: make provision
+      - name: Install krew
+        run: |
+          wget https://github.com/kubernetes-sigs/krew/releases/download/v0.4.3/krew-linux_amd64.tar.gz &&\
+          tar zxvf krew-linux_amd64.tar.gz &&\
+          ./krew-linux_amd64 install krew
+
+      - name: Install kuttl
+        run: PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH" kubectl krew install kuttl
+
+      - name: Run tests
+        run: PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH" make tests
 
   docs:
     runs-on: ubuntu-latest

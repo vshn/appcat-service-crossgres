@@ -1,0 +1,12 @@
+apiVersion: stackgres.io/v1
+kind: SGDbOps
+metadata:
+  name: majorupgrade
+  namespace: sv-postgresql-postgres1-2n49c
+spec:
+ sgCluster: postgres1-2n49c
+ op: majorVersionUpgrade
+ maxRetries: 1
+ majorVersionUpgrade:
+  postgresVersion: '14.4'
+  sgPostgresConfig: postgres-14-generated-from-default-1657869688977

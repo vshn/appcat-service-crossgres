@@ -95,6 +95,10 @@ spec:
                       properties:
                         version:
                           type: string
+                        securityUpdates:
+                          type: string
+                          description: cron schedule when to apply security updates.
+                          default: '00 22 * * 2'
                     alerts:
                       type: object
                       properties:

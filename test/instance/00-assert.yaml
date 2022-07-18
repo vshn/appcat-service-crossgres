@@ -6,8 +6,8 @@ timeout: 120
 apiVersion: kubernetes.crossplane.io/v1alpha1
 kind: Object
 metadata:
-  labels:
-    crossplane.io/claim-name: kuttl-postgres1
+  annotations:
+    kuttl: '00-install'
 spec:
   forProvider:
     manifest:
@@ -32,8 +32,8 @@ metadata:
 apiVersion: kubernetes.crossplane.io/v1alpha1
 kind: Object
 metadata:
-  labels:
-    crossplane.io/claim-name: kuttl-postgres1
+  annotations:
+    kuttl: '00-install'
 spec:
   forProvider:
     manifest:
@@ -50,3 +50,32 @@ metadata:
   labels:
     app: StackGresCluster
   namespace: prometheus-system
+---
+# check for security update cronjob
+apiVersion: kubernetes.crossplane.io/v1alpha1
+kind: Object
+metadata:
+  labels:
+    crossplane.io/claim-name: kuttl-postgres1
+  annotations:
+    kuttl: '00-install'
+spec:
+  forProvider:
+    manifest:
+      apiVersion: batch/v1
+      kind: CronJob
+      spec:
+        schedule: '37 3 4 5 2'
+---
+# confirm that it gets ready
+apiVersion: syn.tools/v1
+kind: PostgreSQLInstance
+metadata:
+  name: kuttl-postgres1
+  annotations:
+    kuttl: '00-install'
+status:
+  conditions:
+    - reason: Available
+      status: "True"
+      type: Ready

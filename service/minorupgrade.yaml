@@ -1,0 +1,12 @@
+apiVersion: stackgres.io/v1
+kind: SGDbOps
+metadata:
+  name: minorversion
+  namespace: sv-postgresql-postgres1-8b52m
+spec:
+ sgCluster: postgres1-8b52m
+ op: minorVersionUpgrade
+ maxRetries: 1
+ minorVersionUpgrade:
+   method: InPlace
+   postgresVersion: '13.7'

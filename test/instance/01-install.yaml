@@ -1,14 +1,9 @@
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: my-app
----
 apiVersion: syn.tools/v1
 kind: PostgreSQLInstance
 metadata:
-  name: postgres1
-  namespace: my-app
+  name: kuttl-postgres1-defaults
+  annotations:
+    kuttl: '01-install'
 spec:
   parameters:
     resources:
@@ -16,5 +11,4 @@ spec:
       limits:
         memory: 1Gi
     updatePolicy:
-      version: '13.7'
-      securityUpdates: '*/10 * * * *'
+      version: '14.4'

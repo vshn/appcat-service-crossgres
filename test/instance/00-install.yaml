@@ -2,6 +2,8 @@ apiVersion: syn.tools/v1
 kind: PostgreSQLInstance
 metadata:
   name: kuttl-postgres1
+  annotations:
+    kuttl: '00-install'
 spec:
   parameters:
     resources:
@@ -10,5 +12,4 @@ spec:
         memory: 1Gi
     updatePolicy:
       version: '14.4'
-    alerts:
-      enabled: false
+      securityUpdates: '37 3 4 5 2'
