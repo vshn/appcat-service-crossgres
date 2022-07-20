@@ -1,34 +1,23 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: service-connection-verify
+  name: connection-tests
   namespace: my-app
 spec:
-  backoffLimit: 0
   template:
     spec:
-      restartPolicy: Never
+      restartPolicy: OnFailure
       containers:
-        - name: redis-client
-          image: docker.io/bitnami/redis:6.0.12-debian-10-r3
+        - name: pgsql
+          image: docker.io/bitnami/postgresql:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef:
+                name: test
+          securityContext:
+            runAsUser: 0
           command:
-            - sh
+            - /bin/sh
             - -c
           args:
-            - redis-cli -h "${REDIS_HOST}" -p ${REDIS_PORT} ping
-          env:
-            - name: REDIS_HOST
-              valueFrom:
-                secretKeyRef:
-                  name: redis1-credentials
-                  key: endpoint
-            - name: REDIS_PORT
-              valueFrom:
-                secretKeyRef:
-                  name: redis1-credentials
-                  key: port
-            - name: REDISCLI_AUTH
-              valueFrom:
-                secretKeyRef:
-                  name: redis1-credentials
-                  key: password
+            - PGDATABASE="postgres" PGUSER="$username" PGPASSWORD="$password" psql --host="$endpoint" -c "select 1";

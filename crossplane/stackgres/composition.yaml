@@ -107,7 +107,7 @@ spec:
                 name: '' #patched
               spec:
                 baseBackups:
-                  cronSchedule: '*/5 * * * *'
+                  cronSchedule: '0 * * * *'
                   retention: 6
                 storage:
                   type: 's3Compatible'
@@ -432,6 +432,10 @@ spec:
               metadata:
                 name: '' #patched
                 namespace: '' # patched
+              stringData:
+                username: postgres
+                port: "5432"
+                endpoint: '' #patched
           references:
           # get the passwords from the operator's secret
             - patchesFrom:
@@ -440,7 +444,7 @@ spec:
                 namespace: '' # patched
                 name: '' #patched
                 fieldPath: data.superuser-password
-              toFieldPath: data.superuser-password
+              toFieldPath: data.password
       patches:
         - type: PatchSet
           patchSetName: annotations
@@ -471,3 +475,13 @@ spec:
       # name of source secret
         - fromFieldPath: metadata.labels[crossplane.io/composite]
           toFieldPath: spec.references[0].patchesFrom.name
+      # endpoint
+        - toFieldPath: spec.forProvider.manifest.stringData.endpoint
+          type: CombineFromComposite
+          combine:
+            variables:
+              - fromFieldPath: metadata.labels[crossplane.io/composite]
+              - fromFieldPath: metadata.labels[crossplane.io/composite]
+            strategy: string
+            string:
+              fmt: "%s.sv-postgresql-%s.svc.cluster.local"

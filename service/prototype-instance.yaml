@@ -17,4 +17,4 @@ spec:
         memory: 1Gi
     updatePolicy:
       version: '13.7'
-      securityUpdates: '*/10 * * * *'
+      securityUpdates: '0 1 * * *'

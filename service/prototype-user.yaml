@@ -1,0 +1,12 @@
+---
+apiVersion: syn.tools/v1
+kind: PostgreSQLUser
+metadata:
+  name: postgres1-user
+  namespace: my-app
+spec:
+  parameters:
+    usernameprefix: testuser
+    secretName: postgres1-connection
+  writeConnectionSecretToRef:
+    name: test
