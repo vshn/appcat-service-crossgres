@@ -115,5 +115,9 @@ spec:
             string:
               fmt: "%s-%s"
         # Set the secretRef name in the crossplane-postgresql namespace
-        - fromFieldPath: metadata.labels[crossplane.io/composite]
+        - fromFieldPath: metadata.uid
           toFieldPath: spec.writeConnectionSecretToRef.name
+          transforms:
+            - type: string
+              string:
+                fmt: "%s-usercredentials"
