@@ -104,7 +104,7 @@ clean: kind-clean ## Clean up local dev environment
 
 tests: export KUBECONFIG = $(KIND_KUBECONFIG)
 tests: stackgres-setup ## run tests with kuttl NOTE: no other insntance should be provisioned when running the tests!
-	kubectl kuttl test ./test
+	kubectl kuttl test --parallel 1 ./test
 
 provision-user: export KUBECONFIG = $(KIND_KUBECONFIG)
 provision-user: provision ## creates a demo user

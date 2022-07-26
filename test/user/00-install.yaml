@@ -1,0 +1,27 @@
+apiVersion: syn.tools/v1
+kind: PostgreSQLInstance
+metadata:
+  name: kuttl-user
+  annotations:
+    kuttl: '01-install'
+spec:
+  parameters:
+    resources:
+      storageSize: 10Gi
+      limits:
+        memory: 1Gi
+    updatePolicy:
+      version: '14.4'
+---
+apiVersion: syn.tools/v1
+kind: PostgreSQLUser
+metadata:
+  name: kuttl-user
+  annotations:
+    kuttl: '00-install'
+spec:
+  parameters:
+    usernameprefix: kuttl
+    secretName: kuttl-user-connection
+  writeConnectionSecretToRef:
+    name: kuttl-test
