@@ -421,6 +421,8 @@ spec:
         - fromFieldPath: metadata.labels[crossplane.io/composite]
           toFieldPath: spec.forProvider.manifest.spec.jobTemplate.spec.template.spec.containers[*].env[1].value
     # connection secret
+    # This is not the crossplane way to do this. But as we're using a vanilla operator here
+    # we have to be a bit creative.
     - base:
         apiVersion: kubernetes.crossplane.io/v1alpha1
         kind: Object
