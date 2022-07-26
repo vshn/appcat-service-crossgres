@@ -54,16 +54,20 @@ spec:
       patches:
         - type: PatchSet
           patchSetName: annotations
+        # patch name of the object
         - fromFieldPath: metadata.name
           toFieldPath: metadata.name
           transforms:
             - type: string
               string:
                 fmt: "%s-postgresuser"
+        # patch the name of the provider config
         - fromFieldPath: metadata.name
           toFieldPath: spec.forProvider.manifest.metadata.name
+        # hardcode the secretRef namespace to the claim namespace
         - fromFieldPath: metadata.labels[crossplane.io/claim-namespace]
           toFieldPath: spec.forProvider.manifest.spec.credentials.connectionSecretRef.namespace
+        # patch the secret name
         - fromFieldPath: spec.parameters.secretName
           toFieldPath: spec.forProvider.manifest.spec.credentials.connectionSecretRef.name
     # role
@@ -97,10 +101,10 @@ spec:
       patches:
         - type: PatchSet
           patchSetName: annotations
-        # - fromFieldPath: spec.parameters.username
-        #   toFieldPath: metadata.name
+        # Patch the providerConfigReg name
         - fromFieldPath: metadata.labels[crossplane.io/composite]
           toFieldPath: spec.providerConfigRef.name
+        # prefix the username
         - toFieldPath: metadata.name
           type: CombineFromComposite
           combine:
@@ -110,8 +114,6 @@ spec:
             strategy: string
             string:
               fmt: "%s-%s"
-        # it doesnt work otherwise...
-        # - fromFieldPath: metadata.labels[crossplane.io/claim-namespace]
-        #   toFieldPath: spec.writeConnectionSecretToRef.namespace
+        # Set the secretRef name in the crossplane-postgresql namespace
         - fromFieldPath: metadata.labels[crossplane.io/composite]
           toFieldPath: spec.writeConnectionSecretToRef.name
