@@ -1,0 +1,20 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 300
+---
+apiVersion: syn.tools/v1
+kind: XPostgreSQLUser
+metadata:
+  annotations:
+    kuttl: '00-install'
+spec:
+  parameters:
+    usernameprefix: kuttl
+    secretName: kuttl-user-connection
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kuttl-test

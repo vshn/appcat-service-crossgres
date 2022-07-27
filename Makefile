@@ -27,6 +27,9 @@ service-definition: crossplane-setup k8up-setup prometheus-setup ## Install the 
 	kubectl apply -f crossplane/stackgres/composite.yaml
 	kubectl apply -f crossplane/stackgres/composition.yaml
 	kubectl wait --for condition=Offered compositeresourcedefinition/xpostgresqlinstances.syn.tools
+	kubectl apply -f crossplane/user/composite.yaml
+	kubectl apply -f crossplane/user/composition.yaml
+	kubectl wait --for condition=Offered compositeresourcedefinition/xpostgresqlusers.syn.tools
 
 provision: export KUBECONFIG = $(KIND_KUBECONFIG)
 provision: stackgres-setup
@@ -53,6 +56,8 @@ $(crossplane_sentinel): kind-setup
 	kubectl wait --for condition=Healthy provider.pkg.crossplane.io/provider-kubernetes --timeout 60s
 	kubectl apply -f crossplane/kubernetes/provider-config.yaml
 	kubectl create clusterrolebinding crossplane:provider-kubernetes-admin --clusterrole cluster-admin --serviceaccount crossplane-system:$$(kubectl get sa -n crossplane-system -o custom-columns=NAME:.metadata.name --no-headers | grep provider-kubernetes)
+	kubectl apply -f crossplane/provider-sql/provider.yaml
+	kubectl wait --for condition=Healthy provider.pkg.crossplane.io/provider-sql --timeout 60s
 	@touch $@
 
 minio-setup: export KUBECONFIG = $(KIND_KUBECONFIG)
@@ -99,4 +104,21 @@ clean: kind-clean ## Clean up local dev environment
 
 tests: export KUBECONFIG = $(KIND_KUBECONFIG)
 tests: stackgres-setup ## run tests with kuttl NOTE: no other insntance should be provisioned when running the tests!
-	kubectl kuttl test ./test
+	kubectl kuttl test --parallel 1 ./test
+
+provision-user: export KUBECONFIG = $(KIND_KUBECONFIG)
+provision-user: provision ## creates a demo user
+	kubectl apply -f service/prototype-user.yaml
+
+deprovision-user: export KUBECONFIG = $(KIND_KUBECONFIG)
+deprovision-user: ## remove demo user
+	kubectl delete -f service/prototype-user.yaml
+
+create-connection-test: export KUBECONFIG = $(KIND_KUBECONFIG)
+create-connection-test: provision-user ## create a test pods to test the connection
+	kubectl apply -f service/test-job.yaml
+
+delete-connection-test: export KUBECONFIG = $(KIND_KUBECONFIG)
+delete-connection-test: ## remove the test pod
+	kubectl delete -f service/test-job.yaml
+

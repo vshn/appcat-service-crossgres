@@ -1,0 +1,123 @@
+---
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  annotations:
+    service.syn.tools/description: PostgreSQL User
+    service.syn.tools/metadata: |
+      {
+        "bullets": [
+          "powered by VSHN"
+        ],
+        "dedicatedService": true,
+        "highAvailability": false,
+        "max_databases": "16",
+        "shareable": true
+      }
+  labels:
+    service.syn.tools/cluster: appc-service1
+    service.syn.tools/id: postgresql-k8s
+    service.syn.tools/name: postgresql-k8s
+    service.syn.tools/updatable: "true"
+  name: postgresqluser
+spec:
+  compositeTypeRef:
+    apiVersion: syn.tools/v1
+    kind: XPostgreSQLUser
+  writeConnectionSecretsToNamespace: crossplane-postgresql
+  patchSets:
+    - name: annotations
+      patches:
+      - type: FromCompositeFieldPath
+        fromFieldPath: metadata.annotations
+      - type: FromCompositeFieldPath
+        fromFieldPath: metadata.labels
+  resources:
+    # providerconfig
+    - base:
+        apiVersion: kubernetes.crossplane.io/v1alpha1
+        kind: Object
+        spec:
+          forProvider:
+            manifest:
+              apiVersion: postgresql.sql.crossplane.io/v1alpha1
+              kind: ProviderConfig
+              metadata:
+                name: '' #patched
+              spec:
+                sslMode: disable
+                credentials:
+                  source: PostgreSQLConnectionSecret
+                  connectionSecretRef:
+                    namespace: '' #patched
+                    name: '' #patched
+      patches:
+        - type: PatchSet
+          patchSetName: annotations
+        # patch name of the object
+        - fromFieldPath: metadata.name
+          toFieldPath: metadata.name
+          transforms:
+            - type: string
+              string:
+                fmt: "%s-postgresuser"
+        # patch the name of the provider config
+        - fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.manifest.metadata.name
+        # hardcode the secretRef namespace to the claim namespace
+        - fromFieldPath: metadata.labels[crossplane.io/claim-namespace]
+          toFieldPath: spec.forProvider.manifest.spec.credentials.connectionSecretRef.namespace
+        # patch the secret name
+        - fromFieldPath: spec.parameters.secretName
+          toFieldPath: spec.forProvider.manifest.spec.credentials.connectionSecretRef.name
+    # role
+    - base:
+        apiVersion: postgresql.sql.crossplane.io/v1alpha1
+        kind: Role
+        metadata:
+          name: '' #patched
+        spec:
+          providerConfigRef:
+            name: '' #patched
+          forProvider:
+            privileges:
+              createDb: true
+              login: true
+          writeConnectionSecretToRef:
+            namespace: crossplane-postgresql
+      connectionDetails:
+        - fromConnectionSecretKey: username
+          type: FromConnectionSecretKey
+          name: username
+        - fromConnectionSecretKey: password
+          type: FromConnectionSecretKey
+          name: password
+        - fromConnectionSecretKey: endpoint
+          type: FromConnectionSecretKey
+          name: endpoint
+        - fromConnectionSecretKey: port
+          type: FromConnectionSecretKey
+          name: port
+      patches:
+        - type: PatchSet
+          patchSetName: annotations
+        # Patch the providerConfigReg name
+        - fromFieldPath: metadata.labels[crossplane.io/composite]
+          toFieldPath: spec.providerConfigRef.name
+        # prefix the username
+        - toFieldPath: metadata.name
+          type: CombineFromComposite
+          combine:
+            variables:
+              - fromFieldPath: spec.parameters.usernameprefix
+              - fromFieldPath: metadata.name
+            strategy: string
+            string:
+              fmt: "%s-%s"
+        # Set the secretRef name in the crossplane-postgresql namespace
+        - fromFieldPath: metadata.uid
+          toFieldPath: spec.writeConnectionSecretToRef.name
+          transforms:
+            - type: string
+              string:
+                fmt: "%s-usercredentials"

@@ -38,6 +38,15 @@ To uninstall, either run
 - `make deprovision` to just uninstall the service instance.
 - `make clean` to completely remove the cluster and all artifacts.
 
+For user management:
+
+`make provision-user`
+`make deprovision-user`
+
+To test the connection:
+
+`kubectl apply -f service/test-job.yaml`
+
 ## How it works
 
 For a full overview, see the official Crossplane docs at https://crossplane.io.
@@ -80,6 +89,15 @@ They should choose which Version of a service they want and be able to do major 
 ### Supporting multiple major versions
 
 We're providing the same version compatibility as the Stackgres operator provides.
+
+### User Management
+Currently the composition gives you the credentials for the superuser. There's a separate XRD and composition that handles the user management separately.
+
+This separate composition takes a secret and uses it to connect to the instance. In theory this is completely agnostic to where the PostgreSQL instance is running, as long as it's reachable.
+
+Of course this is only one way to do it. We should decide on how we want to handle the user and/or database handling.
+
+Also, due to a limitation in `provider-sql` the whole username can't be freely defined. `Provider-sql` takes the username from the Managed Resource's `metadata.name`. As the Managed Resource is globally scoped, it's not supposed to clash with the names.
 
 ### Deploying additional resources
 
