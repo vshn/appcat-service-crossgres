@@ -40,7 +40,6 @@ spec:
       apiVersion: stackgres.io/v1
       kind: SGInstanceProfile
       spec:
-        cpu: "1"
         memory: 1Gi
 ---
 # check for service monitor
