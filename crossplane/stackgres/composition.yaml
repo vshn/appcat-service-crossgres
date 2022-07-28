@@ -165,7 +165,7 @@ spec:
               metadata:
                 name: '' #patched
               spec:
-                cpu: "1"
+                cpu: "200m"
                 memory: '' #patched
       patches:
         - type: PatchSet
